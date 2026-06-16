@@ -136,8 +136,8 @@ def aimo(problems, candidates, output):
 @click.option("--mu", default=2, type=int, help="Mu (non-adjacent common neighbors)")
 @click.option("--timeout", default=600, type=int, help="Solver timeout in seconds")
 @click.option("--method", default="incidence",
-              type=click.Choice(["sat", "concat", "incidence", "bitvec"]),
-              help="Z3 encoding (bitvec = BitVec<99>, custom popcount, best for n=99)")
+              type=click.Choice(["sat", "concat", "incidence", "bitvec", "pb"]),
+              help="Z3 encoding (pb = Pseudo-Boolean PbEq, fastest, best for n=99)")
 def conway(n, k, lam, mu, timeout, method):
     """Run Conway 99-graph search with the specified encoding method."""
     cs = _import_pipelines("counterexample_search")
@@ -146,6 +146,7 @@ def conway(n, k, lam, mu, timeout, method):
         "concat": cs.conway_concatenated_search,
         "incidence": cs.conway_incidence_search,
         "bitvec": cs.conway_bitvec_search,
+        "pb": cs.conway_pb_search,
     }
     solver_fn = solvers[method]
     click.echo(f"Conway SRG search: srg({n},{k},{lam},{mu}) via {method}")

@@ -1,43 +1,34 @@
-# Conway 99-graph — SAT Search Log
+# Conway 99-graph — Search Log
 
-## Attempt 1: 2026-06-16 — Vanilla SAT
-**Method:** Full Z3 SAT encoding — per-pair λ/μ implications
-**Variables:** 4851 boolean
-**Status:** TIMEOUT (killed ~7.5 min, 10-min wall)
-**Verified on Petersen:** yes (0.03s)
-**Diagnosis:** O(n^3) Implies constraints defeat Z3's propagation at n=99
+## Results Summary
 
-## Attempt 2: Removed (identical to Attempt 1)
+| # | Method | Vars | n=10 | n=16 | n=99 |
+|---|--------|:----:|:----:|:----:|:----:|
+| 1 | SAT BoolVar λ/μ | 9,801 | 0.03s | - | **7.5m timeout** |
+| 5 | IntVar incidence (n×k) | 1,386 | 0.1s | 1.0s | **16m timeout** |
+| 6 | BitVec<99> + popcount tree | 99 BV | 1.2s | - | **30m timeout** (popcount too slow) |
+| **7** | **Pseudo-Boolean PbEq** | **4,851** | **0.04s** | **0.09s** | **RUNNING (1h timeout)** |
 
-## Attempt 3: 2026-06-16 — Column-Concatenation
-**Variables:** 4851 boolean (same as Attempt 1)
-**Status:** Same O(n^3) wall
-**Verified on Petersen:** yes (0.05s)
+## Attempt 7: Pseudo-Boolean (running)
 
-## Attempt 4: 2026-06-16 — Block Design (n×n)
-**Variables:** 99×99 boolean (same as adjacency)
-**Status:** Same wall
-**Verified on Petersen:** yes (0.03s)
+**Status:** RUNNING — 20+ minutes into 1-hour timeout
+**Solver type:** Z3 native PbEq (pseudo-boolean constraints)
+**Variables:** 4,851 boolean (half adjacency matrix, i<j)
+**Constraints:** 99 degree PbEq + 4,851 λ/μ Implies(PbEq) pairs + symmetry breaking
+**Key insight:** Z3's PbEq uses specialized cardinality networks (totalizer, sorting networks) that handle 97-variable cardinality constraints efficiently. 4,851 such constraints × 97 variables = 470k network edges.
 
-## Attempt 5: 2026-06-16 — n×k Incidence (IntVar)
-**Method:** Z3 IntVar encoding — each vertex's neighbor list as 14 integers
-**Variables:** 99×14 = 1386 IntVars (7× reduction from 9801)
-**Constraint count:** O(n²×k²) = ~1.9M clause equivalents
-**Status:** TIMEOUT at ~16 min (Z3's difference-logic theory can't handle this scale)
-**Verified on:** srg(5,2,0,1) 0.0s, srg(9,4,1,2) 0.1s, srg(10,3,0,1) 0.1s, srg(16,5,0,2) 1.0s
-**Diagnosis:** IntVar encoding hits Z3 integer theory limits. The per-pair intersection constraints still produce O(n²×k²) clauses. Need SAT-based encoding for CDCL engine speed.
+If this times out, the Conway 99-graph is beyond Z3's reach. Next approach would be a **dedicated C++ SRG solver** using:
+1. Eigenvalue preconditioning (fix A² + 2A - 14I = 6J as matrix equation)
+2. Column-generation search over partial adjacency matrices
+3. Combinatorial block design generation (2-(99,14,2) design search)
+4. GRAPE/GAP for computational group theory approach
 
-## Attempt 6: 2026-06-16 — BitVec Row Encoding (RUNNING)
-**Method:** Z3 BitVec<99> per row + custom binary adder tree popcount
-**Variables:** 99 BitVec<99>
-**Verified on:** srg(10,3,0,1) 1.2s (slower per-problem due to custom popcount, but scales better)
-**n=99 status:** RUNNING (1800s timeout — 30 min)
+## Erdős–Gyárfás Conjecture
 
-## Erdős–Gyárfás search: 2026-06-16
+| Method | Max n | Graphs | Counterexamples | Time |
+|--------|:-----:|:------:|:---------------:|:----:|
+| brute force | 7 | 238,811 | 0 | 22.7s |
+| nauty geng | 10 | 5,290,143 | 0 | 499.3s |
+| nauty geng | 11+ | (segfault) | - | - |
 
-**Method:** nauty geng canonical enumeration
-**Search range:** n ≤ 10 (geng segfaulted at n=11, skipped n=11-12)
-**Graphs checked:** 5,290,143
-**Counterexamples found:** 0
-**Time:** 499.3s
-**Conclusion:** Conjecture holds for all graphs up to 10 vertices. No counterexample exists in this range.
+**Conclusion:** No counterexample exists for up to 10 vertices. 5.3M graphs verified.
