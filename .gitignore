@@ -1,0 +1,4 @@
+/tmp/
+.capt_state/
+__pycache__/
+*.egg-info/

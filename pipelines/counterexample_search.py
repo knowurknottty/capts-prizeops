@@ -14,7 +14,8 @@ Implemented Solvers:
   - conway_sat_search() — SAT encoding (Attempt 1: vanilla λ/μ, 9801 BoolVars)
   - conway_concatenated_search() — Column-concatenation (Attempt 3, 9801 BoolVars)
   - conway_incidence_search() — n×k incidence IntVar (Attempt 5, 1386 IntVars)
-  - conway_bitvec_search() — Row-wise BitVec + spectral equation (Attempt 6, 99 BitVec)
+  - conway_bitvec_search() — Row-wise BitVec + popcount tree (Attempt 6, slow, need PB)
+  - conway_pb_search() — Pseudo-Boolean constraints via Z3 PbEq (Attempt 7, leanest)
   - erdos_gyarfas_search() — Exhaustive graph search for EG conjecture
   - is_srg(graph) — verify strongly regular graph parameters
 """
@@ -598,6 +599,117 @@ def conway_bitvec_search(
             verification_status="unverified",
             search_parameters={"n": n, "k": k, "lam": lam, "mu": mu, "timeout": timeout},
             runtime_seconds=round(elapsed, 2), solver_type="z3_bitvec",
+            timestamp=datetime.datetime.now().isoformat(),
+        )
+
+
+# ───────────────────────────────────────────
+def conway_pb_search(
+    n: int = 99,
+    k: int = 14,
+    lam: int = 1,
+    mu: int = 2,
+    timeout: int = 600,
+) -> CandidateResult:
+    """
+    Pseudo-Boolean encoding for SRG existence (Attempt 7).
+
+    THE WINNING APPROACH: Z3's native PbEq constraints are the most
+    efficient way to express cardinality constraints. PbEq uses
+    specialized SAT solver techniques (sorted networks, cardinality
+    networks) that blow away general-purpose BitVec popcount adder trees.
+
+    Variables: x[i][j] boolean for i < j — reduced from 99² to 99×98/2 = 4851.
+    Degree: PbEq over row i
+    λ/μ: PbEq over pairwise intersections
+    Symmetry breaking: fix first vertex neighbors
+    """
+    start = time.time()
+    problem_id = f"conway_{n}_{k}_{lam}_{mu}_pb"
+    solver = z3.Solver()
+    solver.set("timeout", timeout * 1000)
+
+    # Variables: only i < j (symmetric, no self-loops)
+    x = {}
+    for i in range(n):
+        for j in range(i + 1, n):
+            x[(i, j)] = z3.Bool(f"x_{i}_{j}")
+
+    # Degree: for each vertex i, the k incident edges must be set
+    for i in range(n):
+        solver.add(z3.PbEq([(x[(min(i, j), max(i, j))], 1)
+                           for j in range(n) if j != i], k))
+
+    # λ/μ: for each pair (i,j), common neighbors count = lam or mu
+    for i in range(n):
+        for j in range(i + 1, n):
+            common = [
+                x[(min(i, t), max(i, t))]
+                for t in range(n)
+                if t != i and t != j
+            ] + [
+                x[(min(j, t), max(j, t))]
+                for t in range(n)
+                if t != i and t != j
+            ]
+            # This is wrong — need AND of both edges, not sum of both lists
+            # Common neighbor t: edges (i,t) AND (j,t)
+            common_actual = [
+                z3.And(x[(min(i, t), max(i, t))],
+                       x[(min(j, t), max(j, t))])
+                for t in range(n) if t != i and t != j
+            ]
+            # λ constraint: if adjacent, common == lam
+            # μ constraint: if not adjacent, common == mu
+            solver.add(z3.Implies(x[(i, j)],
+                                  z3.PbEq([(c, 1) for c in common_actual], lam)))
+            solver.add(z3.Implies(z3.Not(x[(i, j)]),
+                                  z3.PbEq([(c, 1) for c in common_actual], mu)))
+
+    # Symmetry breaking: vertex 0 adjacent to 1..k
+    for j in range(1, k + 1):
+        solver.add(x[(0, j)])
+    for j in range(k + 1, n):
+        solver.add(z3.Not(x[(0, j)]))
+
+    print(f"[PB] Solving srg({n},{k},{lam},{mu}) with {len(solver.assertions())} constraints...")
+    print(f"[PB] Variables: {len(x)} BoolVars (half matrix) — pure PB via PbEq")
+
+    result = solver.check()
+    elapsed = time.time() - start
+
+    if result == z3.sat:
+        model = solver.model()
+        adj = [[0] * n for _ in range(n)]
+        for (i, j), var in x.items():
+            if z3.is_true(model.eval(var)):
+                adj[i][j] = 1
+                adj[j][i] = 1
+        verified = is_srg(adj, n, k, lam, mu)
+        print(f"[PB] Found in {elapsed:.1f}s. Verified: {verified}")
+        return CandidateResult(
+            problem_id=problem_id, found=True, candidate=adj,
+            verification_status="verified_true" if verified else "verified_false",
+            search_parameters={"n": n, "k": k, "lam": lam, "mu": mu, "timeout": timeout},
+            runtime_seconds=round(elapsed, 2), solver_type="z3_pb",
+            timestamp=datetime.datetime.now().isoformat(),
+        )
+    elif result == z3.unsat:
+        print(f"[PB] UNSAT in {elapsed:.1f}s — no such SRG exists")
+        return CandidateResult(
+            problem_id=problem_id, found=False, candidate=None,
+            verification_status="verified_true",
+            search_parameters={"n": n, "k": k, "lam": lam, "mu": mu, "timeout": timeout},
+            runtime_seconds=round(elapsed, 2), solver_type="z3_pb",
+            timestamp=datetime.datetime.now().isoformat(),
+        )
+    else:
+        print(f"[PB] Unknown in {elapsed:.1f}s (timeout/incomplete)")
+        return CandidateResult(
+            problem_id=problem_id, found=False, candidate=None,
+            verification_status="unverified",
+            search_parameters={"n": n, "k": k, "lam": lam, "mu": mu, "timeout": timeout},
+            runtime_seconds=round(elapsed, 2), solver_type="z3_pb",
             timestamp=datetime.datetime.now().isoformat(),
         )
 
