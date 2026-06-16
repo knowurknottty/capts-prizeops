@@ -20,4 +20,4 @@ dependencies = [
 capts-prizeops = "capts_prizeops.cli:cli"
 
 [tool.setuptools.packages.find]
-include = ["capts_prizeops*"]
+include = ["capts_prizeops*", "pipelines*"]

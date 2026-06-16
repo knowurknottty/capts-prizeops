@@ -1,0 +1,27 @@
+{
+  "capt_standard_putnam_2024_a1": {
+    "solver": "capt_standard",
+    "problem": "putnam_2024_a1",
+    "solutions": [
+      {
+        "problem_id": "putnam_2024_a1",
+        "problem_statement": "Determine all polynomials P(x) with real coefficients such that\nP(x)^2 + P(2x)^2 = 2P(3x)^2 - 2P(x)P(3x) for all real x.",
+        "solver_id": "capt_standard",
+        "reasoning_chain": [
+          "[SYMBOLIC] Parsed problem: Determine all polynomials P(x) with real coefficients such that\nP(x)^2 + P(2x)^2...",
+          "[SYMBOLIC] Extracting variables and constraints...",
+          "[SYMBOLIC] Generating candidate approaches...",
+          "[SYMBOLIC] Running SymPy simplification...",
+          "[SYMBOLIC] Checking edge cases..."
+        ],
+        "final_answer": "[Simulated answer for putnam_2024_a1 \u2014 replace with CAPT output]",
+        "verified": false,
+        "verification_method": "",
+        "confidence": 0.0,
+        "runtime_seconds": 0.0,
+        "error": null
+      }
+    ],
+    "consensus": 1.0
+  }
+}
