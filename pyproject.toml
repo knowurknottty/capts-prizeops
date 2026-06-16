@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.scripts]
-capts-prizeops = "capts_prizeops.cli:main"
+capts-prizeops = "capts_prizeops.cli:cli"
 
 [tool.setuptools.packages.find]
 include = ["capts_prizeops*"]

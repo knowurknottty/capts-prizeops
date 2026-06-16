@@ -1,0 +1,152 @@
+{
+  "capt_standard_putnam_2024_a1": {
+    "solver": "capt_standard",
+    "problem": "putnam_2024_a1",
+    "solutions": [
+      {
+        "problem_id": "putnam_2024_a1",
+        "problem_statement": "Determine all polynomials P(x) with real coefficients such that\nP(x)^2 + P(2x)^2 = 2P(3x)^2 - 2P(x)P(3x) for all real x.",
+        "solver_id": "capt_standard",
+        "reasoning_chain": [
+          "[SYMBOLIC] Parsed problem: Determine all polynomials P(x) with real coefficients such that\nP(x)^2 + P(2x)^2...",
+          "[SYMBOLIC] Extracting variables and constraints...",
+          "[SYMBOLIC] Generating candidate approaches...",
+          "[SYMBOLIC] Running SymPy simplification...",
+          "[SYMBOLIC] Checking edge cases..."
+        ],
+        "final_answer": "[Simulated answer for putnam_2024_a1 \u2014 replace with CAPT output]",
+        "verified": false,
+        "verification_method": "",
+        "confidence": 0.0,
+        "runtime_seconds": 0.0,
+        "error": null
+      }
+    ],
+    "consensus": 1.0
+  },
+  "capt_deep_research_putnam_2024_a1": {
+    "solver": "capt_deep_research",
+    "problem": "putnam_2024_a1",
+    "solutions": [
+      {
+        "problem_id": "putnam_2024_a1",
+        "problem_statement": "Determine all polynomials P(x) with real coefficients such that\nP(x)^2 + P(2x)^2 = 2P(3x)^2 - 2P(x)P(3x) for all real x.",
+        "solver_id": "capt_deep_research",
+        "reasoning_chain": [
+          "[SYMBOLIC] Parsed problem: Determine all polynomials P(x) with real coefficients such that\nP(x)^2 + P(2x)^2...",
+          "[SYMBOLIC] Extracting variables and constraints...",
+          "[SYMBOLIC] Generating candidate approaches...",
+          "[SYMBOLIC] Running SymPy simplification...",
+          "[SYMBOLIC] Checking edge cases..."
+        ],
+        "final_answer": "[Simulated answer for putnam_2024_a1 \u2014 replace with CAPT output]",
+        "verified": false,
+        "verification_method": "",
+        "confidence": 0.0,
+        "runtime_seconds": 0.0,
+        "error": null
+      }
+    ],
+    "consensus": 1.0
+  },
+  "capt_standard_putnam_2024_a2": {
+    "solver": "capt_standard",
+    "problem": "putnam_2024_a2",
+    "solutions": [
+      {
+        "problem_id": "putnam_2024_a2",
+        "problem_statement": "Let S be a set of 2024 points in the plane, no three of which are\ncollinear. Prove that there exists a line \u2113 that contains exactly one point of S.",
+        "solver_id": "capt_standard",
+        "reasoning_chain": [
+          "[SYMBOLIC] Parsed problem: Let S be a set of 2024 points in the plane, no three of which are\ncollinear. Pro...",
+          "[SYMBOLIC] Extracting variables and constraints...",
+          "[SYMBOLIC] Generating candidate approaches...",
+          "[SYMBOLIC] Running SymPy simplification...",
+          "[SYMBOLIC] Checking edge cases..."
+        ],
+        "final_answer": "[Simulated answer for putnam_2024_a2 \u2014 replace with CAPT output]",
+        "verified": false,
+        "verification_method": "",
+        "confidence": 0.0,
+        "runtime_seconds": 0.0,
+        "error": null
+      }
+    ],
+    "consensus": 1.0
+  },
+  "capt_deep_research_putnam_2024_a2": {
+    "solver": "capt_deep_research",
+    "problem": "putnam_2024_a2",
+    "solutions": [
+      {
+        "problem_id": "putnam_2024_a2",
+        "problem_statement": "Let S be a set of 2024 points in the plane, no three of which are\ncollinear. Prove that there exists a line \u2113 that contains exactly one point of S.",
+        "solver_id": "capt_deep_research",
+        "reasoning_chain": [
+          "[SYMBOLIC] Parsed problem: Let S be a set of 2024 points in the plane, no three of which are\ncollinear. Pro...",
+          "[SYMBOLIC] Extracting variables and constraints...",
+          "[SYMBOLIC] Generating candidate approaches...",
+          "[SYMBOLIC] Running SymPy simplification...",
+          "[SYMBOLIC] Checking edge cases..."
+        ],
+        "final_answer": "[Simulated answer for putnam_2024_a2 \u2014 replace with CAPT output]",
+        "verified": false,
+        "verification_method": "",
+        "confidence": 0.0,
+        "runtime_seconds": 0.0,
+        "error": null
+      }
+    ],
+    "consensus": 1.0
+  },
+  "capt_standard_imo_2024_p1": {
+    "solver": "capt_standard",
+    "problem": "imo_2024_p1",
+    "solutions": [
+      {
+        "problem_id": "imo_2024_p1",
+        "problem_statement": "Determine all integers n \u2265 3 for which there exist integers\na_1, a_2, ..., a_n such that a_1 + a_2 + ... + a_n = n and\na_1 * a_2 * ... * a_n = n",
+        "solver_id": "capt_standard",
+        "reasoning_chain": [
+          "[SYMBOLIC] Parsed problem: Determine all integers n \u2265 3 for which there exist integers\na_1, a_2, ..., a_n s...",
+          "[SYMBOLIC] Extracting variables and constraints...",
+          "[SYMBOLIC] Generating candidate approaches...",
+          "[SYMBOLIC] Running SymPy simplification...",
+          "[SYMBOLIC] Checking edge cases..."
+        ],
+        "final_answer": "[Simulated answer for imo_2024_p1 \u2014 replace with CAPT output]",
+        "verified": false,
+        "verification_method": "",
+        "confidence": 0.0,
+        "runtime_seconds": 0.0,
+        "error": null
+      }
+    ],
+    "consensus": 1.0
+  },
+  "capt_deep_research_imo_2024_p1": {
+    "solver": "capt_deep_research",
+    "problem": "imo_2024_p1",
+    "solutions": [
+      {
+        "problem_id": "imo_2024_p1",
+        "problem_statement": "Determine all integers n \u2265 3 for which there exist integers\na_1, a_2, ..., a_n such that a_1 + a_2 + ... + a_n = n and\na_1 * a_2 * ... * a_n = n",
+        "solver_id": "capt_deep_research",
+        "reasoning_chain": [
+          "[SYMBOLIC] Parsed problem: Determine all integers n \u2265 3 for which there exist integers\na_1, a_2, ..., a_n s...",
+          "[SYMBOLIC] Extracting variables and constraints...",
+          "[SYMBOLIC] Generating candidate approaches...",
+          "[SYMBOLIC] Running SymPy simplification...",
+          "[SYMBOLIC] Checking edge cases..."
+        ],
+        "final_answer": "[Simulated answer for imo_2024_p1 \u2014 replace with CAPT output]",
+        "verified": false,
+        "verification_method": "",
+        "confidence": 0.0,
+        "runtime_seconds": 0.0,
+        "error": null
+      }
+    ],
+    "consensus": 1.0
+  }
+}
