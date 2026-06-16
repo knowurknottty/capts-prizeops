@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "capts-prizeops"
+version = "0.1.0"
+description = "CAPT-driven mathematical bounty hunting, formal theorem proving, and prize capture"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0",
+    "click>=8.0",
+    "sympy>=1.12",
+    "networkx>=3.0",
+    "z3-solver>=4.12",
+]
+
+[project.scripts]
+capts-prizeops = "capts_prizeops.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["capts_prizeops*"]

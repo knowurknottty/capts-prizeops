@@ -1,0 +1,142 @@
+# CAPT Prize Operations — Master Ledger
+# Version: v0.1
+# Schema: Each entry is a prize/program that CAPT can target.
+# Qualitative fields (capts_fit, reality) are assessments, not evidence.
+# Quantitative fields (amount_usd, total_fund_usd) are researched but
+# should be verified against current prize terms before submission.
+
+- prize_id: aimo_grand
+  title: AI Mathematical Olympiad Grand Prize
+  amount_usd: 5000000
+  total_fund_usd: 10000000
+  status: active
+  target_type: ai_model_competition
+  submission_path: approved_competition
+  proof_standard:
+    - public_shared_model
+    - IMO_gold_standard_performance
+  capts_fit: very_high
+  first_action: build AIMO solver harness and Arena baseline
+
+- prize_id: arc_prize_2026
+  title: ARC Prize 2026
+  amount_usd: 2000000
+  status: active
+  target_type: ai_model_competition
+  submission_path: ARC-AGI-3 leaderboard
+  proof_standard:
+    - public_submission
+    - verified_scores
+  capts_fit: very_high
+  first_action: ARC task interpreter + program synthesis loop + Arena heatmap
+
+- prize_id: beal_conjecture
+  title: Beal Conjecture Prize
+  amount_usd: 1000000
+  status: verify_terms_before_submission
+  target_type: proof_or_counterexample
+  submission_path: qualifying_publication
+  proof_standard:
+    - peer_reviewed_publication
+    - ams_verification
+  capts_fit: high
+  first_action: computational search + known results + modular proof map
+
+- prize_id: clay_p_vs_np
+  title: P vs NP
+  amount_usd: 1000000
+  status: open
+  target_type: theorem
+  submission_path: qualifying_publication_then_2_year_acceptance
+  proof_standard:
+    - qualifying_publication
+    - two_year_wait
+    - general_acceptance
+    - clay_review
+  capts_fit: high_but_moonshot
+  first_action: literature map + formal definitions + known barrier ledger
+
+- prize_id: clay_riemann_hypothesis
+  title: Riemann Hypothesis
+  amount_usd: 1000000
+  status: open
+  target_type: theorem
+  submission_path: qualifying_publication_then_2_year_acceptance
+  capts_fit: moonshot
+  first_action: equivalent formulations + computational verification + zero-free regions
+
+- prize_id: clay_navier_stokes
+  title: Navier–Stokes Existence and Smoothness
+  amount_usd: 1000000
+  status: open
+  target_type: theorem
+  submission_path: qualifying_publication_then_2_year_acceptance
+  capts_fit: medium
+  first_action: partial regularity results + known approaches map
+
+- prize_id: clay_birch_swinnerton_dyer
+  title: Birch and Swinnerton-Dyer Conjecture
+  amount_usd: 1000000
+  status: open
+  target_type: theorem
+  submission_path: qualifying_publication_then_2_year_acceptance
+  capts_fit: medium
+  first_action: computational evidence + rank distributions
+
+- prize_id: clay_hodge
+  title: Hodge Conjecture
+  amount_usd: 1000000
+  status: open
+  target_type: theorem
+  submission_path: qualifying_publication_then_2_year_acceptance
+  capts_fit: low
+  first_action: known results + algebraic cycle maps
+
+- prize_id: clay_yang_mills
+  title: Yang–Mills Existence and Mass Gap
+  amount_usd: 1000000
+  status: open
+  target_type: theorem
+  submission_path: qualifying_publication_then_2_year_acceptance
+  capts_fit: low
+  first_action: lattice computations + known approaches
+
+- prize_id: conway_99_graph
+  title: Conway's 99-graph Problem
+  amount_usd: 1000
+  status: historical_bounty
+  target_type: proof_or_counterexample
+  submission_path: peer_reviewed_publication
+  proof_standard:
+    - peer_review
+  capts_fit: high
+  first_action: SAT encoding + graph canonicalization + search
+
+- prize_id: erdos_gyarfas_conjecture
+  title: Erdős–Gyárfás Conjecture
+  amount_usd: 300
+  status: historical_bounty
+  target_type: proof_or_counterexample
+  submission_path: peer_reviewed_publication
+  proof_standard:
+    - peer_review
+  capts_fit: high
+  first_action: graph search + counterexample verifier
+
+- prize_id: putnambench
+  title: PutnamBench (benchmark only)
+  amount_usd: 0
+  status: benchmark
+  target_type: formal_proving_capability
+  submission_path: arxiv
+  capts_fit: high
+  first_action: formal proof pipeline + Lean baseline score
+
+- prize_id: fimo_bench
+  title: FIMO — Formal IMO Problems (benchmark only)
+  amount_usd: 0
+  status: benchmark
+  target_type: formal_proving_capability
+  submission_path: arxiv
+  capts_fit: high
+  first_action: Lean formal IMO-solving pipeline

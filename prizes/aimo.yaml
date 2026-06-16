@@ -1,0 +1,57 @@
+# AIMO Prize — AI Mathematical Olympiad
+#
+# Current: AIMO3 launched November 2025
+# Total fund: $10M ($5M grand prize + up to $5M progress prizes)
+# Requirements: publicly shared AI model performing at IMO-gold standard
+# Submission: approved competition (not direct submission to AIMO)
+#
+# CAPT fit: VERY HIGH — the prize explicitly targets an AI math reasoner,
+# not merely a human-style proof paper. CAPT's cognitive architecture
+# (HMC + NDS + CIG + ECHO) is naturally suited to multi-strategy
+# mathematical reasoning with memory-guided search.
+#
+# References:
+#   https://aimoprize.com/
+#   https://aimoprize.com/participate/
+
+prize_id: aimo_grand
+title: AI Mathematical Olympiad Grand Prize
+total_fund_usd: 10000000
+grand_prize_usd: 5000000
+progress_prizes_total_usd: 5000000
+status: active
+launched: November 2025
+target_type: ai_model_competition
+submission: approved_competition
+
+proof_standard:
+  - public_shared_model: "Model must be publicly shareable"
+  - imo_gold_performance: "Must perform at IMO gold medal level"
+  - approved_competition: "Must compete in an approved competition format"
+
+capts_assessment:
+  fit: very_high
+  rationale: "Prize explicitly targets an AI math reasoner system. CAPT's multi-module cognitive pipeline (NEDA→ATTN→HMC→CIG→NDS→PULSE) provides a natural architecture for mathematical reasoning with memory-guided search and multi-strategy consensus."
+  risks:
+    - "Competition rules may restrict closed-source or custom architecture systems"
+    - "Requires IMO-level problem solving which is domain-specific"
+    - "Existing baselines (DeepSeek-Prover, AlphaProof) are strong"
+  strengths:
+    - "HMC provides memory-guided search across proof strategies"
+    - "ECHO provides cross-session learning from past attempts"
+    - "CIG provides causal inference for proof structure"
+    - "Arena can compare multiple solver candidates"
+
+first_actions:
+  - "Build AIMO problem parser (formal IMO-statement format)"
+  - "Create symbolic scratchpad module"
+  - "Implement multi-solver ensemble with self-consistency voting"
+  - "Integrate Lean/SymPy for intermediate verification"
+  - "Build Arena comparison pipeline for solver candidates"
+  - "Benchmark against AIMO1/AIMO2 problems"
+
+resources:
+  - "https://aimoprize.com/"
+  - "https://aimoprize.com/participate/"
+  - "IMO shortlist problems for training data"
+  - "Lean formal IMO dataset (FIMO, PutnamBench)"

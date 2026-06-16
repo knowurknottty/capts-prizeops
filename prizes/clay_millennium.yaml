@@ -1,0 +1,98 @@
+# Clay Millennium Prize Problems
+#
+# $1M each, six problems remain unsolved:
+#   1. Birch and Swinnerton-Dyer Conjecture
+#   2. Hodge Conjecture
+#   3. Navier–Stokes Existence and Smoothness
+#   4. P vs NP
+#   5. Riemann Hypothesis
+#   6. Yang–Mills Existence and Mass Gap
+#
+# Clay does NOT accept direct submissions. Solution must:
+#   - Be published in a qualifying outlet
+#   - Wait at least two years
+#   - Gain general acceptance in the mathematical community
+#
+# CAPT fit: These are prestige moonshots, not first cash targets.
+# CAPT can contribute by mapping equivalent formulations, running
+# computational experiments, and identifying proof gaps.
+#
+# Reference: https://www.claymath.org/millennium-problems/
+
+prize_id: clay_millennium_problems
+title: Clay Millennium Prize Problems
+per_problem_usd: 1000000
+total_fund_usd: 7000000
+problems_solved: 1  # Poincaré conjecture (Grigori Perelman, 2003-2006)
+problems_remaining: 6
+status: open
+
+submission_rules:
+  - "Must be published in a qualifying peer-reviewed outlet"
+  - "Must wait at least two years after publication"
+  - "Must gain general acceptance in the mathematical community"
+  - "Clay board reviews and makes final decision"
+  - "Direct submissions NOT accepted"
+  - source: https://www.claymath.org/millennium-problems/rules/
+
+problems:
+  - id: clay_p_vs_np
+    title: P vs NP
+    capts_fit: high_but_moonshot
+    first_action: "Literature map + formal definitions + known barrier ledger"
+    notes:
+      - "Relativization, natural proofs, algebrization barriers"
+      - "Circuit complexity approaches"
+      - "Geometric complexity theory"
+
+  - id: clay_riemann_hypothesis
+    title: Riemann Hypothesis
+    capts_fit: moonshot
+    first_action: "Equivalent formulations + computational verification + zero-free regions"
+    notes:
+      - "Over 1000 known equivalent formulations"
+      - "Numerical verification to 10^13 zeros"
+      - "Half of zeros on critical line proven (Levinson, Conrey)"
+
+  - id: clay_navier_stokes
+    title: Navier–Stokes Existence and Smoothness
+    capts_fit: medium
+    first_action: "Partial regularity results + known approaches"
+    notes:
+      - "Well-posedness in 2D is known (Ladyzhenskaya)"
+      - "3D regularity in certain scaling-invariant spaces"
+      - "Tao's averaged/weak formulations"
+
+  - id: clay_birch_swinnerton_dyer
+    title: Birch and Swinnerton-Dyer Conjecture
+    capts_fit: medium
+    first_action: "Computational evidence + rank distributions"
+    notes:
+      - "Many numerical verifications exist"
+      - "Gross–Zagier, Kolyvagin give partial results"
+      - "100% of rank 0 and 1 curves treated (Bhargava–Shankar)"
+
+  - id: clay_hodge
+    title: Hodge Conjecture
+    capts_fit: low
+    first_action: "Known results + algebraic cycle maps"
+    notes:
+      - "Most abstract of the six"
+      - "Hodge cycles = algebraic cycles for abelian varieties (absurd)"
+
+  - id: clay_yang_mills
+    title: Yang–Mills Existence and Mass Gap
+    capts_fit: low
+    first_action: "Lattice computations + known approaches"
+    notes:
+      - "Lattice gauge theory confirms mass gap numerically"
+      - "Super Yang–Mills in 4D partially understood (Seiberg–Witten)"
+
+capts_assessment:
+  overarching_strategy: "Do not start by trying to 'solve Riemann.' Start with known equivalent formulations, known failed approaches, known barriers, special cases, formalized definitions, computational experiments, and proof gap maps. A CAPT-generated proof must survive expert math review for years before payment is realistic."
+  first_actions:
+    - "Create formal definitions across all six problems"
+    - "Build known-barrier ledger (what can't work and why)"
+    - "Build equivalent-formulations map for each problem"
+    - "Run computational experiments for special cases"
+    - "Produce proof-gap maps mapping what is proven to what remains"

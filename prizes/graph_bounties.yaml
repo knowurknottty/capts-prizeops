@@ -1,0 +1,50 @@
+# Graph/Combinatorics Bounties
+#
+# Smaller payouts but excellent for proving CAPT's discovery pipeline:
+# conjecture intake → search → counterexample/proof → verification.
+#
+# Entries:
+#   Conway 99-graph — $1,000 historical offer (John Conway)
+#   Erdős–Gyárfás conjecture — ~$100 proof / $50 counterexample
+#   Other Erdős prize problems — various, often small
+#
+# These are perfect for the Arena failure-museum loop, not primary funding.
+
+prizes:
+  - prize_id: conway_99_graph
+    title: Conway's 99-graph Problem
+    amount_usd: 1000
+    status: historical_bounty
+    target_type: proof_or_counterexample
+    submission: peer_reviewed_publication
+    description: >
+      Does there exist a strongly regular graph with parameters (99, 14, 1, 2)?
+      That is, 99 vertices, each vertex adjacent to 14 others, any two adjacent
+      vertices share exactly 1 common neighbor, any two non-adjacent vertices
+      share exactly 2 common neighbors.
+    capts_fit: high
+    known_status: "Open since Conway's offer in 1970s. Extensive computational searches have narrowed but not resolved. Standard approach: spectral analysis + combinatorial constraints + SAT/SMT."
+    first_action: "SAT encoding + graph canonicalization + search"
+    techniques:
+      - "SAT/SMT encoding with symmetries broken"
+      - "Spectral analysis of adjacency matrix"
+      - "Clique counting constraints"
+      - "Combinatorial block design approach"
+
+  - prize_id: erdos_gyarfas_conjecture
+    title: Erdős–Gyárfás Conjecture
+    amount_usd: 300
+    status: historical_bounty
+    target_type: proof_or_counterexample
+    submission: peer_reviewed_publication
+    description: >
+      Every graph with minimum degree at least 3 contains a simple cycle whose
+      length is a power of 2.
+    capts_fit: high
+    known_status: "Open. Verified for many graph classes (planar, claw-free, etc.). The general case remains open."
+    first_action: "Graph search + counterexample verifier"
+    techniques:
+      - "Computational search for counterexamples"
+      - "Minor-closed class verification"
+      - "Known partial results: planar graphs, claw-free graphs"
+      - "SAT encoding for small-graph exhaustive search"

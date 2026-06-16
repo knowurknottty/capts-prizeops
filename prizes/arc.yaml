@@ -1,0 +1,43 @@
+# ARC Prize 2026
+#
+# Over $2M total prize pool
+# Targets ARC-AGI-3 — an unbeaten benchmark for agentic intelligence
+# Tests abstraction, memory, exploration, planning, fluid intelligence
+#
+# CAPT fit: VERY HIGH — ARC directly tests the capabilities CAPT was
+# built for: abstraction from few examples, memory-guided reasoning,
+# exploration/exploitation balance, and cross-domain generalization.
+#
+# Reference: https://arcprize.org/
+
+prize_id: arc_prize_2026
+title: ARC Prize 2026
+amount_usd: 2000000
+status: active
+target_type: ai_model_competition
+submission: ARC-AGI-3 leaderboard
+
+proof_standard:
+  - public_submission: "Submit to ARC-AGI-3 leaderboard"
+  - verified_scores: "Scores verified by ARC evaluation system"
+
+capts_assessment:
+  fit: very_high
+  rationale: "ARC-AGI-3 evaluates abstraction and reasoning from few examples — exactly what CAPT's HMC (pattern extraction from few examples) + NEDA (spike-based pattern matching) + CIG (causal structure inference) are designed for."
+  risks:
+    - "ARC tasks are intentionally few-shot; CAPT's ECHO memory may not help if the system hasn't seen similar tasks"
+    - "Program synthesis approaches (DreamCoder-style) are competitive"
+  strengths:
+    - "HMC can extract abstract patterns from task examples via hypervector binding"
+    - "NEDA spike patterns can represent task structure as neural activation sequences"
+    - "Exploration/exploitation balance in ALLO module maps to ARC search"
+  first_actions:
+    - "Build ARC task visualiser + grid interpreter"
+    - "Implement program synthesis loop (search over transformation programs)"
+    - "Build state-memory explorer with CAPT HMC for task pattern storage"
+    - "Implement policy mutation search with Arena heatmap"
+    - "Build failure museum for failing task categories"
+  resources:
+    - "https://arcprize.org/"
+    - "ARC-AGI-3 dataset"
+    - "Public leaderboard for baselines"

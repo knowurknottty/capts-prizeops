@@ -1,0 +1,42 @@
+# Beal Conjecture Prize
+#
+# $1,000,000 prize for a proof or counterexample
+# Beal's conjecture: if A^x + B^y = C^z with x,y,z > 2,
+# then A, B, C share a common prime factor.
+#
+# CAPT fit: HIGH — number theory counterexample search with
+# modular constraints + proof decomposition. Good target for
+# CAPT's conjecture decomposition + search + formal verification pipeline.
+#
+# Reference: https://en.wikipedia.org/wiki/Beal_conjecture
+# Prize held under AMS supervision (verify current terms)
+
+prize_id: beal_conjecture
+title: Beal Conjecture Prize
+amount_usd: 1000000
+status: verify_terms_before_submission
+target_type: proof_or_counterexample
+submission_path: qualifying_publication
+
+proof_standard:
+  - peer_reviewed_publication: "Published in qualifying peer-reviewed journal"
+  - ams_verification: "Verified by AMS prize committee"
+
+capts_assessment:
+  fit: high
+  rationale: "Beal is a number theory statement with bounded-searchable finite regions. CAPT can decompose the problem into modular constraints, run computational searches, and attempt both counterexample generation and proof construction."
+  risks:
+    - "Extensive computational searches already run (e.g., Boyer, 2010+); significant new ground needed"
+    - "Prize terms should be verified with AMS before committing serious resources"
+  known_constraints:
+    - "If a counterexample exists with sum ≤ 10^9, it likely would have been found"
+    - "Modular constraints: certain coprime conditions eliminate large regions"
+    - "Darmon–Granville theorem constrains exponents"
+  first_actions:
+    - "Build Beal computational search engine with modular constraint pruning"
+    - "Map known computational bounds and excluded regions"
+    - "Decompose into sub-claims for formal proof attempt"
+    - "Implement SymPy verification layer for partial results"
+  resources:
+    - "https://en.wikipedia.org/wiki/Beal_conjecture"
+    - "AMS prize rules page (verify URL)"
