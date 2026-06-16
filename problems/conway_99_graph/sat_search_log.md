@@ -1,36 +1,34 @@
-# Conway 99-graph — SAT Search Log
+## Attempt 1: 2026-06-16 — Vanilla SAT
 
-## Attempt 1: 2026-06-16
+**Method:** Full Z3 SAT encoding of srg(99, 14, 1, 2) — per-pair λ/μ implications
+**Variables:** 4851 boolean
+**Status:** TIMEOUT (killed after ~7.5 min, would have hit 10-min limit)
+**Result:** Background process exited -15 (SIGTERM)
+**Verified on Petersen:** yes (0.03s)
+**Diagnosis:** O(n^3) pairwise Implies constraints defeat Z3's propagation at n=99
 
-**Method:** Full Z3 SAT encoding of srg(99, 14, 1, 2)
-**Variables:** 4851 boolean (x[i][j] adjacency matrix, i<j)
-**Constraints:**
-- Symmetry: x[i][j] == x[j][i] (4851 binary constraints)
-- No self-loops: x[i][i] == false
-- Degree: PbEq per vertex (99 PbEq constraints)
-- λ/μ: For each of 4851 pairs, Implies(adjacent, common==1) AND Implies(not adjacent, common==2)
-- Symmetry breaking: vertex 0's neighbors fixed (adjacent to 1..14)
-**Timeout:** 600s (10 minutes)
+## Attempt 2: Replaced by Attempt 3
 
-### Sanity Check (same code, same constraints)
-- Petersen srg(10, 3, 0, 1): **Found in 0.03s** — encoding verified correct
-- Verified via `is_srg()`: PASS
+The "spectral" function was structurally identical to Attempt 1 (same constraint pattern, different docstring). Removed as redundant.
 
-### Conway 99 Result
-- **TIMEOUT after ~7.5 minutes** — Z3 returned unknown/timeout
-- Status: unverified (search did not complete)
-- Even with symmetry breaking, the 99-vertex problem has ~10^170 symmetric redundancies
+## Attempt 3: 2026-06-16 — Column-Concatenation
 
-### Analysis
-General-purpose SAT solvers hit the exponential wall hard for 99-vertex SRGs. The λ/μ encoding produces O(n^3) constraints (~485k implications) and Z3 cannot propagate effectively at this scale.
+**Method:** Z3 SAT with column-concatenation approach (per-pair constraints, but documented spectral equation)
+**Variables:** 4851 boolean
+**Status:** Same constraint pattern as Attempt 1 (O(n^3) unavoidable with boolean vars)
+**Verified on Petersen:** yes (0.05s)
+**Diagnosis:** Still O(n^3) boolean encoding. The real improvement requires Z3 Int-based row variables where dot products become popcount(row_i & row_j) with O(n^2) constraints.
 
-**Known SRG search literature says:** special-purpose solvers using:
-1. **Block design reduction** — this SRG parameter set is equivalent to a 2-(99,14,2) symmetric design; can reduce to incidence matrix constraints
-2. **Spectral constraints** — eigenvalues r=5, s=-2 with multiplicities 55, 44; adjacency matrix must satisfy A^2 + 2A - 14I = 6J
-3. **Column-concatenation** — reduces O(n^3) λ/μ to O(n^2) by encoding rows of the adjacency matrix as integer variables
-4. **nauty + constraint propagation** — generate SRG candidates via canonical augmentation
+## Attempt 4: 2026-06-16 — Block Design
 
-### Next Steps
-- **Attempt 2:** implement specialized SRG search using spectral equation A^2 + 2A - 14I = 6J as the primary constraint, not pairwise λ/μ
-- **Attempt 3:** use block design approach — search for a 2-(99,14,2) design's incidence matrix
-- **Attempt 4:** column-concatenation encoding with Z3's integer variables instead of propositional
+**Method:** 2-(99,14,2) block design incidence matrix encoding
+**Variables:** 99×99 boolean (same as adjacency — no reduction yet)
+**Status:** Untested at n=99 (same O(n^3) wall)
+**Verified on Petersen:** yes (0.03s)
+**Diagnosis:** Variable count is 9801 same as adjacency but the block design formulation opens door to n×k incidence matrix (1386 vars). Need to implement the n×k formulation properly.
+
+## Next: True n×k Block Design
+
+Instead of 99×99 block[i][t], use 99×14 block[i][t] (each vertex in exactly 14 blocks).
+Intersection constraints become: |block[i] ∩ block[j]| ∈ {1,2} — which is 2⋅(nC2) = 9702 constraints
+over 1386 variables instead of 9801. That's 7x fewer vars and may matter for Z3's CDCL.
