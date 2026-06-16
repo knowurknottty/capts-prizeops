@@ -13,7 +13,8 @@ claim ledger.
 Implemented Solvers:
   - conway_sat_search() — SAT encoding (Attempt 1: vanilla λ/μ, 9801 BoolVars)
   - conway_concatenated_search() — Column-concatenation (Attempt 3, 9801 BoolVars)
-  - conway_incidence_search() — TRUE n×k incidence (Attempt 5, 1386 IntVars)
+  - conway_incidence_search() — n×k incidence IntVar (Attempt 5, 1386 IntVars)
+  - conway_bitvec_search() — Row-wise BitVec + spectral equation (Attempt 6, 99 BitVec)
   - erdos_gyarfas_search() — Exhaustive graph search for EG conjecture
   - is_srg(graph) — verify strongly regular graph parameters
 """
@@ -465,6 +466,138 @@ def conway_incidence_search(
             verification_status="unverified",
             search_parameters={"n": n, "k": k, "lam": lam, "mu": mu, "timeout": timeout},
             runtime_seconds=round(elapsed, 2), solver_type="z3_incidence",
+            timestamp=datetime.datetime.now().isoformat(),
+        )
+
+
+# ───────────────────────────────────────────
+def _bv_popcount(solver, bv: z3.BitVecRef, n: int) -> z3.BitVecRef:
+    """
+    Compute popcount of a BitVec of width n using a binary adder tree.
+    Returns a BitVec of width ceil(log2(n+1)).
+    Z3 doesn't have a native bvpopcount in some versions, so we build one.
+    """
+    width = (n.bit_length())
+    bits = [z3.Extract(i, i, bv) for i in range(n)]
+    # Adder tree: sum pairs recursively
+    while len(bits) > 1:
+        next_level = []
+        for i in range(0, len(bits), 2):
+            if i + 1 < len(bits):
+                # Zero-extend for addition
+                a = z3.ZeroExt(width, bits[i])
+                b = z3.ZeroExt(width, bits[i + 1])
+                next_level.append(a + b)
+            else:
+                next_level.append(z3.ZeroExt(width, bits[i]))
+        bits = next_level
+    return bits[0] if bits else z3.BitVecVal(0, width)
+
+
+def conway_bitvec_search(
+    n: int = 99,
+    k: int = 14,
+    lam: int = 1,
+    mu: int = 2,
+    timeout: int = 600,
+) -> CandidateResult:
+    """
+    BitVec row encoding for SRG existence (Attempt 6).
+
+    THE KEY INSIGHT: encode each row of the adjacency matrix as a Z3 BitVec
+    of width n. The degree constraint becomes `bv_popcount(row_i) == k`.
+    The λ/μ constraint for pair (i,j) is `bv_popcount(row_i & row_j) = lam or mu`.
+
+    BitVec + bit-blast gives Z3 a pure SAT problem after translation, which
+    is vastly faster than the IntVar-based difference-logic theory used by
+    the incidence encoding (Attempt 5).
+
+    Variables: 99 BitVec<99> — extremely compact.
+    Constraints: degree (99 popcount), λ/μ (4851 popcount of AND), symmetry.
+    """
+    start = time.time()
+    problem_id = f"conway_{n}_{k}_{lam}_{mu}_bv"
+    solver = z3.Solver()
+    solver.set("timeout", timeout * 1000)
+
+    # BitVec variables: one per row of adjacency matrix
+    bv = [z3.BitVec(f"bv_{i}", n) for i in range(n)]
+
+    # No self-loops: bit i of row_i must be 0
+    # Construct mask with a 1 at position i (LSB = vertex 0)
+    for i in range(n):
+        mask = 1 << i
+        solver.add((bv[i] & mask) == 0)
+
+    # Symmetry: row_i[j] == row_j[i]
+    # Extract bit j of bv[i], bit i of bv[j], assert equality
+    for i in range(n):
+        for j in range(i + 1, n):
+            bit_ij = z3.Extract(j, j, bv[i])
+            bit_ji = z3.Extract(i, i, bv[j])
+            solver.add(bit_ij == bit_ji)
+
+    # Degree: popcount(bv[i]) == k
+    for i in range(n):
+        pc = _bv_popcount(solver, bv[i], n)
+        solver.add(z3.BV2Int(pc) == k)
+
+    # λ/μ constraints via intersect popcount
+    for i in range(n):
+        for j in range(i + 1, n):
+            inter = bv[i] & bv[j]
+            inter_pop = _bv_popcount(solver, inter, n)
+            inter_val = z3.BV2Int(inter_pop)
+            bit_ij = z3.Extract(j, j, bv[i])
+            solver.add(z3.If(bit_ij == 1, inter_val == lam, inter_val == mu))
+
+    # Symmetry breaking: fix first row's high bits
+    # Row 0 has bits 1..k set, bits k+1..n-1 clear
+    mask_ones = 0
+    for j in range(1, k + 1):
+        mask_ones |= (1 << j)
+    solver.add((bv[0] & z3.BitVecVal(mask_ones, n)) == z3.BitVecVal(mask_ones, n))
+    solver.add((bv[0] & ~z3.BitVecVal(mask_ones, n) & ~z3.BitVecVal(1, n)) == 0)
+
+    print(f"[BV] Solving srg({n},{k},{lam},{mu}) with {len(solver.assertions())} constraints...")
+    print(f"[BV] Variables: {n} BitVec<{n}> — bit-blast turns this into SAT")
+
+    result = solver.check()
+    elapsed = time.time() - start
+
+    if result == z3.sat:
+        model = solver.model()
+        adj = [[0] * n for _ in range(n)]
+        for i in range(n):
+            val = int(str(model.eval(bv[i])))
+            for j in range(n):
+                if (val >> j) & 1:
+                    adj[i][j] = 1
+        verified = is_srg(adj, n, k, lam, mu)
+        print(f"[BV] Found in {elapsed:.1f}s. Verified: {verified}")
+        return CandidateResult(
+            problem_id=problem_id, found=True, candidate=adj,
+            verification_status="verified_true" if verified else "verified_false",
+            search_parameters={"n": n, "k": k, "lam": lam, "mu": mu, "timeout": timeout},
+            runtime_seconds=round(elapsed, 2), solver_type="z3_bitvec",
+            timestamp=datetime.datetime.now().isoformat(),
+        )
+    elif result == z3.unsat:
+        print(f"[BV] UNSAT in {elapsed:.1f}s — no such SRG exists")
+        return CandidateResult(
+            problem_id=problem_id, found=False, candidate=None,
+            verification_status="verified_true",
+            search_parameters={"n": n, "k": k, "lam": lam, "mu": mu, "timeout": timeout},
+            runtime_seconds=round(elapsed, 2), solver_type="z3_bitvec",
+            timestamp=datetime.datetime.now().isoformat(),
+        )
+    else:
+        print(f"[BV] Unknown in {elapsed:.1f}s (timeout/incomplete)")
+        return CandidateResult(
+            problem_id=problem_id, found=False, candidate=None,
+            verification_status="unverified",
+            search_parameters={"n": n, "k": k, "lam": lam, "mu": mu, "timeout": timeout},
+            runtime_seconds=round(elapsed, 2), solver_type="z3_bitvec",
             timestamp=datetime.datetime.now().isoformat(),
         )
 

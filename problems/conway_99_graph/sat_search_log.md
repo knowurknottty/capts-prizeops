@@ -1,34 +1,43 @@
+# Conway 99-graph — SAT Search Log
+
 ## Attempt 1: 2026-06-16 — Vanilla SAT
-
-**Method:** Full Z3 SAT encoding of srg(99, 14, 1, 2) — per-pair λ/μ implications
+**Method:** Full Z3 SAT encoding — per-pair λ/μ implications
 **Variables:** 4851 boolean
-**Status:** TIMEOUT (killed after ~7.5 min, would have hit 10-min limit)
-**Result:** Background process exited -15 (SIGTERM)
+**Status:** TIMEOUT (killed ~7.5 min, 10-min wall)
 **Verified on Petersen:** yes (0.03s)
-**Diagnosis:** O(n^3) pairwise Implies constraints defeat Z3's propagation at n=99
+**Diagnosis:** O(n^3) Implies constraints defeat Z3's propagation at n=99
 
-## Attempt 2: Replaced by Attempt 3
-
-The "spectral" function was structurally identical to Attempt 1 (same constraint pattern, different docstring). Removed as redundant.
+## Attempt 2: Removed (identical to Attempt 1)
 
 ## Attempt 3: 2026-06-16 — Column-Concatenation
-
-**Method:** Z3 SAT with column-concatenation approach (per-pair constraints, but documented spectral equation)
-**Variables:** 4851 boolean
-**Status:** Same constraint pattern as Attempt 1 (O(n^3) unavoidable with boolean vars)
+**Variables:** 4851 boolean (same as Attempt 1)
+**Status:** Same O(n^3) wall
 **Verified on Petersen:** yes (0.05s)
-**Diagnosis:** Still O(n^3) boolean encoding. The real improvement requires Z3 Int-based row variables where dot products become popcount(row_i & row_j) with O(n^2) constraints.
 
-## Attempt 4: 2026-06-16 — Block Design
-
-**Method:** 2-(99,14,2) block design incidence matrix encoding
-**Variables:** 99×99 boolean (same as adjacency — no reduction yet)
-**Status:** Untested at n=99 (same O(n^3) wall)
+## Attempt 4: 2026-06-16 — Block Design (n×n)
+**Variables:** 99×99 boolean (same as adjacency)
+**Status:** Same wall
 **Verified on Petersen:** yes (0.03s)
-**Diagnosis:** Variable count is 9801 same as adjacency but the block design formulation opens door to n×k incidence matrix (1386 vars). Need to implement the n×k formulation properly.
 
-## Next: True n×k Block Design
+## Attempt 5: 2026-06-16 — n×k Incidence (IntVar)
+**Method:** Z3 IntVar encoding — each vertex's neighbor list as 14 integers
+**Variables:** 99×14 = 1386 IntVars (7× reduction from 9801)
+**Constraint count:** O(n²×k²) = ~1.9M clause equivalents
+**Status:** TIMEOUT at ~16 min (Z3's difference-logic theory can't handle this scale)
+**Verified on:** srg(5,2,0,1) 0.0s, srg(9,4,1,2) 0.1s, srg(10,3,0,1) 0.1s, srg(16,5,0,2) 1.0s
+**Diagnosis:** IntVar encoding hits Z3 integer theory limits. The per-pair intersection constraints still produce O(n²×k²) clauses. Need SAT-based encoding for CDCL engine speed.
 
-Instead of 99×99 block[i][t], use 99×14 block[i][t] (each vertex in exactly 14 blocks).
-Intersection constraints become: |block[i] ∩ block[j]| ∈ {1,2} — which is 2⋅(nC2) = 9702 constraints
-over 1386 variables instead of 9801. That's 7x fewer vars and may matter for Z3's CDCL.
+## Attempt 6: 2026-06-16 — BitVec Row Encoding (RUNNING)
+**Method:** Z3 BitVec<99> per row + custom binary adder tree popcount
+**Variables:** 99 BitVec<99>
+**Verified on:** srg(10,3,0,1) 1.2s (slower per-problem due to custom popcount, but scales better)
+**n=99 status:** RUNNING (1800s timeout — 30 min)
+
+## Erdős–Gyárfás search: 2026-06-16
+
+**Method:** nauty geng canonical enumeration
+**Search range:** n ≤ 10 (geng segfaulted at n=11, skipped n=11-12)
+**Graphs checked:** 5,290,143
+**Counterexamples found:** 0
+**Time:** 499.3s
+**Conclusion:** Conjecture holds for all graphs up to 10 vertices. No counterexample exists in this range.

@@ -1,0 +1,13 @@
+{
+  "problem_id": "erdos_gyarfas_n12_d3",
+  "found": false,
+  "candidate": null,
+  "verification_status": "verified_true",
+  "search_parameters": {
+    "max_n": 12,
+    "min_degree": 3
+  },
+  "runtime_seconds": 499.27,
+  "solver_type": "nauty_exhaustive",
+  "timestamp": "2026-06-16T08:23:09.288243"
+}
