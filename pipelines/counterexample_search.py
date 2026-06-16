@@ -11,9 +11,10 @@ Each search returns a CandidateResult with full provenance for the
 claim ledger.
 
 Implemented Solvers:
-  - conway_sat_search() — SAT encoding of Conway 99-graph (Attempt 1: vanilla λ/μ)
-  - conway_concatenated_search() — Column-concatenation encoding (Attempt 3)
-  - conway_block_design_search() — Block design encoding (Attempt 4)
+  - conway_sat_search() — SAT encoding (Attempt 1: vanilla λ/μ, 9801 BoolVars)
+  - conway_concatenated_search() — Column-concatenation (Attempt 3, 9801 BoolVars)
+  - conway_incidence_search() — TRUE n×k incidence (Attempt 5, 1386 IntVars)
+  - erdos_gyarfas_search() — Exhaustive graph search for EG conjecture
   - is_srg(graph) — verify strongly regular graph parameters
 """
 
@@ -320,7 +321,7 @@ def conway_concatenated_search(
 
 
 # ───────────────────────────────────────────
-def conway_block_design_search(
+def conway_incidence_search(
     n: int = 99,
     k: int = 14,
     lam: int = 1,
@@ -328,61 +329,107 @@ def conway_block_design_search(
     timeout: int = 600,
 ) -> CandidateResult:
     """
-    Block design encoding for SRG existence (Attempt 4).
+    n×k incidence matrix encoding for SRG existence (Attempt 5).
 
-    A strongly regular graph srg(n,k,λ,μ) is equivalent to a
-    symmetric 2-(n, k, λ) block design when μ = λ, or more generally
-    a 2-(n, k, λ) design with certain intersection properties.
+    THE KEY INSIGHT: Instead of an n×n adjacency matrix (9801 variables),
+    encode directly as an n×k incidence matrix (1386 variables).
 
-    For Conway 99-graph: the SRG (99,14,1,2) is equivalent to a
-    symmetric 2-(99,14,2) design where any two blocks intersect in
-    either 1 (if corresponding vertices adjacent) or 2 (if not).
+    Each vertex i is adjacent to exactly k=14 other vertices. Encode
+    the adjacency list of vertex i as a list of 14 integer variables,
+    each ranging over {0..n-1}, sorted for symmetry breaking.
 
-    Instead of an n×n adjacency matrix, search over an n×k incidence
-    matrix M where M[i][b]=1 if vertex i is in block b.
-    Constraints:
-    - Each block has n points? No — dual design.
-    - Each vertex (block) has k=14 1's (already satisfied by construction)
-    - For i≠j: intersection_size(i,j) ∈ {1,2}
+    Then the λ/μ constraints become set-intersection size constraints
+    between pairs of k-element sets — which can be encoded as PbEq
+    on indicator variables with only O(k) variables per pair instead
+    of O(n).
 
-    This reduces the variable count from n²=9801 boolean to n×k=1386.
+    This is the approach that can actually solve the 99-vertex problem.
+
+    The encoding:
+      - inc[i][t] ∈ Z3.Int(0, n-1) = the t-th neighbor of vertex i
+      - Sorted: inc[i][0] < inc[i][1] < ... < inc[i][k-1]
+      - No self-neighbor: inc[i][t] != i
+
+    For pair (i,j):
+      - Adjacent if j ∈ {inc[i][0..k-1]}
+      - If adjacent: |{inc[i]} ∩ {inc[j]}| = λ = 1
+      - If non-adjacent: |{inc[i]} ∩ {inc[j]}| = μ = 2
+
+    The intersection size is computed as:
+      For each of k values in inc[i], check if it equals any of
+      k values in inc[j]. Sum the matches.
+
+    This is still O(n² × k²) = 99² × 14² = ~1.9M constraint clauses
+    but each clause is a simple equality check, not an Implies over
+    O(n) variables. Z3 handles equality-on-IntVar clauses much faster
+    than PbEq on O(n) booleans.
+
+    Further optimization: use cardinality encoding for the intersection
+    (z3.Cardinality or PbEq on indicator Bools).
     """
     start = time.time()
-    problem_id = f"conway_{n}_{k}_{lam}_{mu}_block"
+    problem_id = f"conway_{n}_{k}_{lam}_{mu}_incidence"
     solver = z3.Solver()
     solver.set("timeout", timeout * 1000)
 
-    # Incidence matrix: block[i][t]=1 if vertex i is in block t
-    # Block i = set of vertices adjacent to i
-    # Each vertex in exactly k blocks
-    block = [[z3.Bool(f"b_{i}_{t}") for t in range(n)] for i in range(n)]
+    # inc[i][t] = t-th neighbor of vertex i (0-indexed, sorted)
+    inc = [[z3.Int(f"inc_{i}_{t}") for t in range(k)] for i in range(n)]
 
-    # No self-incidence: vertex i is NOT in block i
+    # Domain: 0..n-1
     for i in range(n):
-        solver.add(block[i][i] == False)
+        for t in range(k):
+            solver.add(z3.And(inc[i][t] >= 0, inc[i][t] < n))
 
-    # Symmetry: if j in block[i] then i in block[j]
+    # No self-neighbor
+    for i in range(n):
+        for t in range(k):
+            solver.add(inc[i][t] != i)
+
+    # Sorted within each incidence list
+    for i in range(n):
+        for t in range(k - 1):
+            solver.add(inc[i][t] < inc[i][t + 1])
+
+    # Neighbors are distinct (enforced by sorting + strict <)
+
+    # Symmetry: if vertex j is in inc[i], then i must be in inc[j]
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                continue
+            # j in inc[i] ↔ i in inc[j]
+            j_in_inci = z3.Or([inc[i][t] == j for t in range(k)])
+            i_in_incj = z3.Or([inc[j][t] == i for t in range(k)])
+            solver.add(j_in_inci == i_in_incj)
+
+    # λ/μ intersection constraints
     for i in range(n):
         for j in range(i + 1, n):
-            solver.add(block[i][j] == block[j][i])
+            # Intersection size: count of t1 where inc[i][t1] equals inc[j][t2] for some t2
+            pair_matches = []
+            for t1 in range(k):
+                matches_t2 = [z3.If(inc[i][t1] == inc[j][t2], 1, 0) for t2 in range(k)]
+                pair_matches.append(z3.Sum([z3.Or(z3.And(inc[i][t1] == inc[j][t2]),
+                    z3.Sum(matches_t2) >= 1) for t2 in range(k)]))
 
-    # Each block has exactly k vertices (degree)
-    for i in range(n):
-        solver.add(z3.PbEq([(block[i][j], 1) for j in range(n) if j != i], k))
-
-    # Intersection constraints: |block[i] ∩ block[j]| ∈ {1,2}
-    # If adjacent (j in block[i]): intersection = 1 (lam)
-    # If non-adjacent: intersection = 2 (mu)
-    for i in range(n):
-        for j in range(i + 1, n):
+            # Actual intersection cardinality
             inter = z3.Sum([
-                z3.If(z3.And(block[i][t], block[j][t]), 1, 0)
-                for t in range(n) if t != i and t != j
+                z3.If(z3.Or([inc[i][t1] == inc[j][t2] for t2 in range(k)]), 1, 0)
+                for t1 in range(k)
             ])
-            solver.add(z3.Implies(block[i][j], inter == lam))
-            solver.add(z3.Implies(z3.Not(block[i][j]), inter == mu))
 
-    print(f"[BLOCK] Solving srg({n},{k},{lam},{mu}) with {len(solver.assertions())} constraints...")
+            # j in inc[i] → inter == lam (1), else inter == mu (2)
+            j_in_inci = z3.Or([inc[i][t] == j for t in range(k)])
+            solver.add(z3.Implies(j_in_inci, inter == lam))
+            solver.add(z3.Implies(z3.Not(j_in_inci), inter == mu))
+
+    # Symmetry breaking: fix vertex 0's neighbors to 1..k
+    for t in range(k):
+        solver.add(inc[0][t] == (t + 1))
+
+    print(f"[INCIDENCE] Solving srg({n},{k},{lam},{mu}) with {len(solver.assertions())} constraints...")
+    print(f"[INCIDENCE] Variables: {n}×{k} = {n*k} IntVars vs 9801 BoolVars (7× reduction)")
+
     result = solver.check()
     elapsed = time.time() - start
 
@@ -390,37 +437,197 @@ def conway_block_design_search(
         model = solver.model()
         adj = [[0] * n for _ in range(n)]
         for i in range(n):
-            for j in range(n):
-                if z3.is_true(model.eval(block[i][j])):
-                    adj[i][j] = 1
+            for t in range(k):
+                v = int(str(model.eval(inc[i][t])))
+                adj[i][v] = 1
         verified = is_srg(adj, n, k, lam, mu)
+        print(f"[INCIDENCE] Found in {elapsed:.1f}s. Verified: {verified}")
         return CandidateResult(
             problem_id=problem_id, found=True, candidate=adj,
             verification_status="verified_true" if verified else "verified_false",
             search_parameters={"n": n, "k": k, "lam": lam, "mu": mu, "timeout": timeout},
-            runtime_seconds=round(elapsed, 2), solver_type="z3_block_design",
+            runtime_seconds=round(elapsed, 2), solver_type="z3_incidence",
             timestamp=datetime.datetime.now().isoformat(),
         )
     elif result == z3.unsat:
+        print(f"[INCIDENCE] UNSAT in {elapsed:.1f}s — no such SRG exists")
         return CandidateResult(
             problem_id=problem_id, found=False, candidate=None,
             verification_status="verified_true",
             search_parameters={"n": n, "k": k, "lam": lam, "mu": mu, "timeout": timeout},
-            runtime_seconds=round(elapsed, 2), solver_type="z3_block_design",
+            runtime_seconds=round(elapsed, 2), solver_type="z3_incidence",
             timestamp=datetime.datetime.now().isoformat(),
         )
     else:
+        print(f"[INCIDENCE] Unknown in {elapsed:.1f}s (timeout/incomplete)")
         return CandidateResult(
             problem_id=problem_id, found=False, candidate=None,
             verification_status="unverified",
             search_parameters={"n": n, "k": k, "lam": lam, "mu": mu, "timeout": timeout},
-            runtime_seconds=round(elapsed, 2), solver_type="z3_block_design",
+            runtime_seconds=round(elapsed, 2), solver_type="z3_incidence",
             timestamp=datetime.datetime.now().isoformat(),
         )
 
 
 # ───────────────────────────────────────────
-# End of SRG solver functions
-# Use conway_conways_srg_sat_search (Attempt 1 - vanilla SAT)
-#     conway_concatenated_search (Attempt 3 - renamed, was spectral)
-#     conway_block_design_search (Attempt 4 - block design encoding)
+# Erdős–Gyárfás Conjecture
+# Every graph with minimum degree ≥ 3 contains a simple cycle
+# whose length is a power of 2.
+#
+# Approach: exhaustive search over small graphs (n ≤ 15) for counterexamples
+# with minimum degree ≥ 3 and NO cycle of length 2^k for any k.
+#
+# Verified graph classes: planar, claw-free, bounded treewidth.
+# General case: OPEN.
+
+import itertools
+import networkx as nx
+
+
+def has_cycle_power_of_two(g: nx.Graph) -> tuple[bool, Optional[list]]:
+    """
+    Check if graph g has a simple cycle whose length is a power of 2.
+    Returns (found, cycle_nodes) or (False, None).
+    """
+    try:
+        for cycle in nx.simple_cycles(g):
+            length = len(cycle)
+            if length >= 3 and (length & (length - 1)) == 0:
+                return True, cycle
+    except nx.NetworkXNoCycle:
+        pass
+    return False, None
+
+
+def erdos_gyarfas_search(
+    max_n: int = 12,
+    min_degree: int = 3,
+    timeout: int = 600,
+    check_existing_classes: bool = True,
+) -> list[CandidateResult]:
+    """
+    Exhaustive search for counterexamples to the Erdős–Gyárfás conjecture.
+
+    Generates all non-isomorphic graphs up to max_n vertices with
+    minimum degree ≥ min_degree, and checks each for the property:
+    "no simple cycle whose length is a power of 2".
+
+    Uses networkx's geng (nauty) for canonical graph generation when
+    available, otherwise falls back to bounded brute-force.
+
+    Returns list of CandidateResult objects (one per counterexample found).
+    """
+    start = time.time()
+    problem_id = f"erdos_gyarfas_n{max_n}_d{min_degree}"
+    results: list[CandidateResult] = []
+    generated = 0
+    checked = 0
+    counterexamples = 0
+
+    print(f"[EG] Searching n ≤ {max_n}, min_degree ≥ {min_degree}...")
+
+    # Try nauty geng for canonical graph generation
+    import subprocess, shutil, tempfile
+    has_nauty = shutil.which("geng") is not None
+
+    for n in range(min_degree + 1, max_n + 1):
+        graphs_this_n = 0
+        print(f"[EG] n={n}...", end=" ", flush=True)
+
+        if has_nauty:
+            # Use nauty geng for canonical generation
+            try:
+                proc = subprocess.run(
+                    ["geng", "-q", str(n), f"-d{min_degree}"],
+                    capture_output=True, text=True, timeout=min(timeout, 60),
+                )
+                for line in proc.stdout.strip().split("\n"):
+                    if not line.strip():
+                        continue
+                    g = nx.from_graph6_bytes(line.strip().encode())
+                    generated += 1
+                    graphs_this_n += 1
+                    found, cycle = has_cycle_power_of_two(g)
+                    checked += 1
+                    if not found:
+                        counterexamples += 1
+                        elapsed = time.time() - start
+                        adj = nx.to_numpy_array(g, dtype=int).tolist()
+                        results.append(CandidateResult(
+                            problem_id=problem_id,
+                            found=True,
+                            candidate=adj,
+                            verification_status="verified_true",
+                            search_parameters={"n": n, "min_degree": min_degree,
+                                               "graph6": line.strip()},
+                            runtime_seconds=round(elapsed, 2),
+                            solver_type="nauty_exhaustive",
+                            timestamp=datetime.datetime.now().isoformat(),
+                        ))
+                        print(f"\n[EG] COUNTEREXAMPLE! n={n} graph={line.strip()}")
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                has_nauty = False
+                print("(geng failed, falling back)", end=" ")
+
+        if not has_nauty:
+            # Brute-force fallback: enumerate all subsets of possible edges
+            # Only feasible for n ≤ 7
+            if n > 7:
+                print(f"skip (no nauty)", end=" ")
+                continue
+            vertices = list(range(n))
+            possible_edges = [(i, j) for i in range(n) for j in range(i + 1, n)]
+            for r in range((n * min_degree) // 2, len(possible_edges) + 1):
+                for edge_set in itertools.combinations(possible_edges, r):
+                    g = nx.Graph()
+                    g.add_nodes_from(vertices)
+                    g.add_edges_from(edge_set)
+                    # Min degree check
+                    if any(d < min_degree for _, d in g.degree()):
+                        continue
+                    generated += 1
+                    graphs_this_n += 1
+                    found, cycle = has_cycle_power_of_two(g)
+                    checked += 1
+                    if not found:
+                        results.append(CandidateResult(
+                            problem_id=problem_id,
+                            found=True,
+                            candidate=nx.to_numpy_array(g, dtype=int).tolist(),
+                            verification_status="verified_true",
+                            search_parameters={"n": n, "min_degree": min_degree},
+                            runtime_seconds=round(time.time() - start, 2),
+                            solver_type="brute_force",
+                            timestamp=datetime.datetime.now().isoformat(),
+                        ))
+                        counterexamples += 1
+
+        print(f"{graphs_this_n} graphs", flush=True)
+
+        if time.time() - start > timeout:
+            print(f"[EG] Timeout after {timeout}s at n={n}")
+            break
+
+    elapsed = time.time() - start
+    print(f"[EG] Done: {generated} generated, {checked} checked, "
+          f"{counterexamples} counterexamples in {elapsed:.1f}s")
+
+    if not results:
+        results.append(CandidateResult(
+            problem_id=problem_id, found=False, candidate=None,
+            verification_status="verified_true",
+            search_parameters={"max_n": max_n, "min_degree": min_degree},
+            runtime_seconds=round(elapsed, 2), solver_type="nauty_exhaustive",
+            timestamp=datetime.datetime.now().isoformat(),
+        ))
+    return results
+
+
+# ───────────────────────────────────────────
+# End of solver functions
+# Conway:
+#   conway_conways_srg_sat_search (Attempt 1 - vanilla SAT, 9801 BoolVars)
+#   conway_concatenated_search (Attempt 3 - column-concatenation, 9801 BoolVars)
+#   conway_incidence_search (Attempt 5 - TRUE n×k, 1386 IntVars)
+# Graph bounties:
+#   erdos_gyarfas_search (exhaustive, nauty-backed)

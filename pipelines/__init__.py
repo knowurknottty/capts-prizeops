@@ -6,3 +6,4 @@ from . import lean_formalizer
 from . import proof_auditor
 from . import solver_orchestrator
 from . import submission_packager
+from . import conjecture_decomposer
