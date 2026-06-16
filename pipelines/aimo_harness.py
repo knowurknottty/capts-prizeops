@@ -154,27 +154,71 @@ def run_solver(problem: AIMOProblem,
     """
     Run a single solver candidate on a problem.
 
-    In production, this calls CAPT's cogitate pipeline with the
-    candidate's parameters. Currently returns a stub result for
-    harness validation.
+    Tries to call CAPT's cogitate pipeline. Falls back to stub
+    when CAPT is unavailable (Hermes not running, no backend, etc.).
     """
     start = time.time()
     scratchpad = generate_symbolic_scratchpad(problem.statement)
+    answer = ""
+    error = None
 
-    # Simulate solver run (placeholder for CAPT integration)
-    # real implementation: engine.capt.cogitate(query, research_depth=candidate.capt_research_depth)
-    reasoning = scratchpad
-    answer = f"[Simulated answer for {problem.problem_id} — replace with CAPT output]"
+    # Try real CAPT cogitate
+    try:
+        import sys, os
+        biocapt_root = os.path.expanduser(
+            "~/Biocapt-ecosystem-fullcaptlang/primary/biocapt-desktop"
+        )
+        if os.path.exists(biocapt_root) and os.path.exists(
+            os.path.join(biocapt_root, "modules", "capt_core.py")
+        ):
+            sys.path.insert(0, biocapt_root)
+            sys.path.insert(0, os.path.join(biocapt_root, "modules"))
+
+            # Set up environment for CAPT
+            os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+            os.environ.setdefault("OMP_NUM_THREADS", "1")
+
+            from capt_core import CAPTCore
+            engine = CAPTCore(
+                vessel_id="aimo-harness",
+                data_dir="/tmp/capts_prizeops_aimo",
+            )
+            query = f"Solve this mathematical problem step by step:\n\n{problem.statement}"
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(
+                    engine.cogitate,
+                    query, research_depth=candidate.capt_research_depth
+                )
+                result = future.result(timeout=120)  # 2 min max
+            pulse = result.get("PULSE", {})
+            if pulse.get("success") and pulse.get("content"):
+                answer = pulse["content"]
+            else:
+                answer = pulse.get("content", "") or (
+                    f"CAPT cogitate returned no content. "
+                    f"Error: {pulse.get('error', 'unknown')}"
+                )
+            scratchpad = result.get("HMC", {}).get("primed_context", scratchpad)
+    except Exception as e:
+        error = str(e)
+        # Fallback: simulated answer
+        answer = (
+            f"[SIMULATED — CAPT backend unavailable: {error}] "
+            f"{problem.problem_id}"
+        )
 
     elapsed = time.time() - start
     return IMOSolution(
         problem_id=problem.problem_id,
         problem_statement=problem.statement,
         solver_id=candidate.solver_id,
-        reasoning_chain=reasoning,
+        reasoning_chain=scratchpad if isinstance(scratchpad, list) else [str(scratchpad)],
         final_answer=answer,
         verified=False,
+        confidence=0.5,
         runtime_seconds=round(elapsed, 3),
+        error=error,
     )
 
 
