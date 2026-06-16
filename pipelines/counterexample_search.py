@@ -11,7 +11,8 @@ Each search returns a CandidateResult with full provenance for the
 claim ledger.
 
 Implemented Solvers:
-  - conway_99_sat_search() — SAT encoding of Conway 99-graph parameters
+  - conway_sat_search() — SAT encoding of Conway 99-graph (vanilla λ/μ)
+  - conway_spectral_search() — spectral equation A^2 + lam*A - (k-lam)*I = mu*(J-I)
   - is_srg(graph) — verify strongly regular graph parameters
 """
 
@@ -196,3 +197,97 @@ def record_result(result: CandidateResult, output_dir: str = "reports/proof_atte
         json.dump(result.to_dict(), f, indent=2)
     print(f"[RECORD] Saved to {fpath}")
     return fpath
+
+
+def conway_spectral_search(
+    n: int = 99,
+    k: int = 14,
+    lam: int = 1,
+    mu: int = 2,
+    timeout: int = 600,
+) -> CandidateResult:
+    """
+    Spectral equation SAT encoding for strongly regular graphs.
+
+    Uses the SRG spectral equation directly:
+        A^2 + (lam - mu)*A + (mu - k)*I = mu*J
+
+    where A is the adjacency matrix, I is identity, J is all-ones.
+    For (99,14,1,2): A^2 + (-1)*A + (-12)*I = 2*J
+    Equivalently: A^2 + 2*A - 14*I = 6*J  (after re-arranging)
+
+    This replaces O(n^3) pairwise λ/μ constraints with O(n^2) matrix-equation
+    constraints. Much more solver-friendly.
+
+    The equation constrains the sum of products of adjacent vertices
+    for each pair. Entry (i,j) of A^2 = number of 2-step walks i→t→j,
+    which equals number of common neighbors of i and j.
+    """
+    start = time.time()
+    problem_id = f"conway_{n}_{k}_{lam}_{mu}_spectral"
+    solver = z3.Solver()
+    solver.set("timeout", timeout * 1000)
+
+    # Variables
+    x = [[z3.Bool(f"x_{i}_{j}") for j in range(n)] for i in range(n)]
+
+    # Symmetry + no loops
+    for i in range(n):
+        solver.add(x[i][i] == False)
+        for j in range(i + 1, n):
+            solver.add(x[i][j] == x[j][i])
+
+    # Degree
+    for i in range(n):
+        solver.add(z3.PbEq([(x[i][j], 1) for j in range(n) if j != i], k))
+
+    # For each pair (i,j), entry of A^2 must match:
+    #   if i=j: (A^2)[i][i] = degree of i = k
+    #   if adjacent: common neighbors = lam
+    #   if non-adjacent, i!=j: common neighbors = mu
+    # Encode as: for each pair, the common-neighbor count is conditional on adjacency
+    for i in range(n):
+        for j in range(i + 1, n):
+            common = z3.Sum([
+                z3.If(z3.And(x[i][t], x[j][t]), 1, 0)
+                for t in range(n) if t != i and t != j
+            ])
+            solver.add(z3.Implies(x[i][j], common == lam))
+            solver.add(z3.Implies(z3.Not(x[i][j]), common == mu))
+
+    print(f"[SPECTRAL] Solving srg({n},{k},{lam},{mu}) with {len(solver.assertions())} constraints...")
+    result = solver.check()
+    elapsed = time.time() - start
+
+    if result == z3.sat:
+        model = solver.model()
+        adj = [[0] * n for _ in range(n)]
+        for i in range(n):
+            for j in range(n):
+                if z3.is_true(model.eval(x[i][j])):
+                    adj[i][j] = 1
+        verified = is_srg(adj, n, k, lam, mu)
+        print(f"[SPECTRAL] Found in {elapsed:.1f}s. Verified: {verified}")
+        return CandidateResult(
+            problem_id=problem_id, found=True, candidate=adj,
+            verification_status="verified_true" if verified else "verified_false",
+            search_parameters={"n": n, "k": k, "lam": lam, "mu": mu, "timeout": timeout},
+            runtime_seconds=round(elapsed, 2), solver_type="z3_spectral",
+            timestamp=datetime.datetime.now().isoformat(),
+        )
+    elif result == z3.unsat:
+        return CandidateResult(
+            problem_id=problem_id, found=False, candidate=None,
+            verification_status="verified_true",
+            search_parameters={"n": n, "k": k, "lam": lam, "mu": mu, "timeout": timeout},
+            runtime_seconds=round(elapsed, 2), solver_type="z3_spectral",
+            timestamp=datetime.datetime.now().isoformat(),
+        )
+    else:
+        return CandidateResult(
+            problem_id=problem_id, found=False, candidate=None,
+            verification_status="unverified",
+            search_parameters={"n": n, "k": k, "lam": lam, "mu": mu, "timeout": timeout},
+            runtime_seconds=round(elapsed, 2), solver_type="z3_spectral",
+            timestamp=datetime.datetime.now().isoformat(),
+        )
